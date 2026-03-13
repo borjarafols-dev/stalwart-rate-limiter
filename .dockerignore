@@ -1,0 +1,11 @@
+.git
+.github
+.woodpecker
+docker-compose.yaml
+compose.yaml
+compose.override.yaml
+var/
+.env.local
+.env.*.local
+.phpunit.cache/
+phpunit.xml

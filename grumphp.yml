@@ -1,0 +1,13 @@
+grumphp:
+    stop_on_failure: true
+    git_hook_variables:
+        EXEC_GRUMPHP_COMMAND: ['docker', 'exec', 'app']
+    tasks:
+        phpstan:
+            configuration: phpstan.neon
+            use_grumphp_paths: false
+        phpcsfixer:
+            config: .php-cs-fixer.dist.php
+            config_contains_finder: true
+            verbose: true
+            diff: true

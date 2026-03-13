@@ -1,0 +1,114 @@
+name: PR Checks
+
+on:
+  pull_request:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: opentelemetry
+          tools: composer:v2
+
+      - name: Get Composer cache dir
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+        env:
+          COMPOSER_AUTH: '{"github-oauth":{"github.com":"${{ secrets.COMPOSER_AUTH }}"}}'
+
+      - name: Upload vendor
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor
+          path: vendor/
+          retention-days: 1
+
+  phpstan:
+    needs: setup
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_SECRET: test-secret-for-ci
+      DATABASE_URL: "sqlite:///%kernel.project_dir%/var/data_test.db"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: opentelemetry
+
+      - name: Download vendor
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor
+          path: vendor/
+
+      - name: Warm up cache
+        run: php bin/console cache:warmup --env=dev
+
+      - name: Run PHPStan
+        run: php -d memory_limit=512M vendor/bin/phpstan analyse --no-progress
+
+  cs-fixer:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: opentelemetry
+
+      - name: Download vendor
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor
+          path: vendor/
+
+      - name: Run PHP-CS-Fixer
+        run: php vendor/bin/php-cs-fixer fix --dry-run --diff --no-interaction
+
+  test:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: opentelemetry
+
+      - name: Download vendor
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor
+          path: vendor/
+
+      - name: Run PHPUnit
+        run: php bin/phpunit
