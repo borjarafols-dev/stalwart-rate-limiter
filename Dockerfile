@@ -16,7 +16,7 @@ RUN if [ -n "$GITHUB_TOKEN" ]; then composer config --global github-oauth.github
 # Stage 2: Build PHP extensions
 FROM dunglas/frankenphp:php8.4-bookworm AS php-extensions-build
 
-RUN install-php-extensions pdo_pgsql intl opcache opentelemetry protobuf
+RUN install-php-extensions pdo_pgsql intl opcache opentelemetry protobuf pcov
 
 # Stage 3: Application base
 FROM dunglas/frankenphp:php8.4-bookworm AS app
@@ -53,10 +53,9 @@ RUN composer dump-autoload --no-dev --classmap-authoritative \
 # Stage 5: Dev (quality tools + dev dependencies)
 FROM app AS dev
 
-ENV APP_ENV=dev
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
 
-RUN apt-get update && apt-get install -y --no-install-recommends git \
+RUN apt-get update && apt-get install -y --no-install-recommends git unzip \
     && rm -rf /var/lib/apt/lists/*
 
 ARG GITHUB_TOKEN
@@ -69,6 +68,9 @@ FROM app AS test
 
 ENV APP_ENV=test
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/zz-app.ini
+
+RUN apt-get update && apt-get install -y --no-install-recommends git unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 ARG GITHUB_TOKEN
 COPY --from=composer-build /usr/bin/composer /usr/bin/composer

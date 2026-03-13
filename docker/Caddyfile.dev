@@ -1,0 +1,26 @@
+{
+	auto_https off
+	http_port 8080
+
+	frankenphp {
+		worker /app/public/index.php {
+			watch /app/src/**/*.php
+			watch /app/config/**/*.yaml
+			watch /app/templates/**/*.twig
+		}
+	}
+
+	order php_server before file_server
+}
+
+:8080 {
+	log {
+		output stdout
+		format json
+	}
+
+	root * /app/public
+	encode zstd gzip
+
+	php_server
+}
