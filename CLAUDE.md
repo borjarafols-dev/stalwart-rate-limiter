@@ -22,6 +22,18 @@ Event-driven Symfony service that dynamically adjusts Stalwart outbound rate lim
 - **Final by default**: mark classes `final` unless designed for extension.
 - **Value objects**: use readonly classes for DTOs and value objects.
 
+## Service Design (IMPORTANT)
+
+**Always program to interfaces.** Every service that talks to an external system (APIs, mail servers, etc.) must follow this pattern:
+
+1. **Interface** in `src/Contract/` — defines the contract (e.g., `StalwartApiClientInterface`).
+2. **Real implementation** in `src/Service/` — the production class that makes actual HTTP calls, marked `final readonly`.
+3. **In-memory fake** in `tests/Fake/` — a test double that stores state in arrays, used for integration tests (e.g., `InMemoryStalwartApiClient`). This is NOT a mock — it's a working implementation that behaves like the real thing but without external dependencies.
+
+Wire the interface to the real implementation in `config/services.yaml`. In test environment, override with the fake in `config/services_test.yaml` (or via `when@test` in services.yaml).
+
+This enables **end-to-end integration tests** where you can simulate external interactions (e.g., "Stalwart sends webhook → service processes it → verify what was written to the Stalwart API") without mocking.
+
 ## API Documentation (IMPORTANT)
 
 **Every endpoint MUST be documented in the OpenAPI spec and visible in Swagger UI at `/api/docs`.**
@@ -34,12 +46,22 @@ Event-driven Symfony service that dynamically adjusts Stalwart outbound rate lim
 ## Testing (IMPORTANT)
 
 - **100% code coverage** is required on all new code. Every new class and method must have corresponding tests.
+- **Unit tests** for pure logic — use `PHPUnit\Framework\TestCase` with mocks/stubs.
+- **Integration tests** for end-to-end flows — use `WebTestCase` with in-memory fakes from `tests/Fake/` swapped in via test service config. These test real behavior without external dependencies.
 - **Functional tests** for controllers/endpoints use `Symfony\Bundle\FrameworkBundle\Test\WebTestCase`.
 - **OpenAPI decorators** must also be tested — verify they add the expected paths to the OpenAPI spec.
 - Tests run inside Docker: `docker exec app vendor/bin/phpunit --coverage-text`.
 - The test environment uses `APP_ENV=test` — set in `.env.test` and synced in `tests/bootstrap.php`.
 - **Do NOT set `APP_ENV` as a baked `ENV` in the Dockerfile dev stage** — it conflicts with PHPUnit's test env override. Let `compose.yaml` and `.env` handle it. The Dockerfile `ENV APP_ENV=...` is only for `prod` and `test` stages.
 - The `tests/bootstrap.php` syncs `$_SERVER['APP_ENV']` to `$_ENV['APP_ENV']` before `Dotenv::bootEnv()` — this is required because `KernelTestCase::createKernel()` reads `$_ENV` before `$_SERVER`.
+
+## Interface / Fake Pattern
+
+- External service integrations are defined as **interfaces** in `src/Contract/`.
+- Production implementations live in `src/Service/` as `final readonly` classes.
+- In-memory **fakes** live in `tests/Fake/` and implement the same interface. They are `final` (not readonly, since they hold mutable state).
+- The test environment swaps the real implementation for the fake via `when@test` in `config/services.yaml`.
+- This allows integration tests to run without real HTTP calls while still exercising the full service container.
 
 ## Code Quality Gates
 
@@ -71,13 +93,19 @@ docker exec app vendor/bin/phpunit --coverage-text
 
 ```
 src/
+├── Contract/       # Interfaces for external services
 ├── Controller/     # Symfony controllers (plain endpoints with #[Route])
 ├── Entity/         # Doctrine entities
 ├── Messenger/      # Message handlers & messages
 ├── OpenApi/        # OpenAPI decorators for documenting non-ApiResource endpoints
 ├── Repository/     # Doctrine repositories
+├── Service/        # Real implementations of Contract interfaces
 └── Kernel.php
-tests/              # PHPUnit tests (mirrors src/ structure)
+tests/
+├── Controller/     # Functional tests (WebTestCase)
+├── Fake/           # In-memory fake implementations for integration tests
+├── Service/        # Unit tests for services
+└── ...             # Mirrors src/ structure
 migrations/         # Doctrine migrations
 config/             # Symfony configuration
 docker/
@@ -119,7 +147,9 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 - If any check fails, fixes the issues (in both test and production code if needed).
 
 ### Coordination Rules
-- Agents work sequentially: Architect -> Developer -> Tester.
+- **Architect -> USER REVIEW -> Developer -> Tester.**
+- After the Architect produces the plan, **present it to the user for approval** before launching the Developer. The user may adjust the design, reject parts, or add requirements.
+- Do NOT start coding until the user explicitly approves the plan.
 - Each agent has access to the output/work of the previous agent.
 - The tester agent is the final gatekeeper — nothing is done until all checks pass.
 - After all checks pass: **push the branch and create a PR** using `gh pr create`.

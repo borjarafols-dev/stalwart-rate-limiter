@@ -8,6 +8,19 @@ framework:
     #esi: true
     #fragments: true
 
+    http_client:
+        scoped_clients:
+            stalwart.client:
+                base_uri: '%env(STALWART_API_URL)%'
+                headers:
+                    Authorization: 'Bearer %env(STALWART_API_TOKEN)%'
+                retry_failed:
+                    enabled: true
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+                    jitter: 0.5
+
 when@test:
     framework:
         test: true

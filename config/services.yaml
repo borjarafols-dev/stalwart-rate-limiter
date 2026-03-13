@@ -29,3 +29,19 @@ services:
         arguments:
             $loggerProvider: '@OpenTelemetry\API\Logs\LoggerProviderInterface'
             $level: !php/const Monolog\Level::Info
+
+    App\Contract\StalwartApiClientInterface:
+        alias: App\Service\StalwartApiClient
+
+    App\Service\StalwartApiClient:
+        arguments:
+            $httpClient: '@stalwart.client'
+
+when@test:
+    services:
+        App\Contract\StalwartApiClientInterface:
+            alias: App\Tests\Fake\InMemoryStalwartApiClient
+            public: true
+
+        App\Tests\Fake\InMemoryStalwartApiClient:
+            public: true
