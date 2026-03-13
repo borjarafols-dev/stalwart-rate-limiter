@@ -122,6 +122,7 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 - Agents work sequentially: Architect -> Developer -> Tester.
 - Each agent has access to the output/work of the previous agent.
 - The tester agent is the final gatekeeper — nothing is done until all checks pass.
+- After all checks pass: **push the branch and create a PR** using `gh pr create`.
 
 ## Linear Integration
 
