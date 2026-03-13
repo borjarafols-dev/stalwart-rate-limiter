@@ -16,7 +16,7 @@ RUN if [ -n "$GITHUB_TOKEN" ]; then composer config --global github-oauth.github
 # Stage 2: Build PHP extensions
 FROM dunglas/frankenphp:php8.4-bookworm AS php-extensions-build
 
-RUN install-php-extensions pdo_pgsql intl opcache opentelemetry protobuf
+RUN install-php-extensions pdo_pgsql intl opcache opentelemetry protobuf pcov
 
 # Stage 3: Application base
 FROM dunglas/frankenphp:php8.4-bookworm AS app
