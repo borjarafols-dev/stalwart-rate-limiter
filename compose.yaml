@@ -9,7 +9,9 @@ services:
     environment:
       APP_ENV: dev
       APP_SECRET: dev-secret-not-for-production
-      DATABASE_URL: postgresql://app:!ChangeMe!@database:5432/app?serverVersion=16&charset=utf8
+      DATABASE_URL: postgresql://ratelimiter:changeme@database:5432/ratelimiter?serverVersion=16&charset=utf8
+      STALWART_API_URL: http://stalwart:8443
+      WEBHOOK_SECRET: change-me
       OTEL_PHP_TRACES_PROCESSOR: simple
     volumes:
       - ./:/app
@@ -21,11 +23,11 @@ services:
   database:
     image: postgres:${POSTGRES_VERSION:-16}-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-ratelimiter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_USER: ${POSTGRES_USER:-ratelimiter}
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-ratelimiter}", "-U", "${POSTGRES_USER:-ratelimiter}"]
       timeout: 5s
       retries: 5
       start_period: 60s
