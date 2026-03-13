@@ -16,6 +16,10 @@ services:
     volumes:
       - ./:/app
       - /app/vendor
+      - ./docker/Caddyfile.dev:/etc/frankenphp/Caddyfile
+    command: >
+      sh -c "php bin/console assets:install --no-interaction
+      && docker-php-entrypoint --config /etc/frankenphp/Caddyfile --adapter caddyfile"
     depends_on:
       database:
         condition: service_healthy

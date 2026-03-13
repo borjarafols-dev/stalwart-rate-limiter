@@ -22,6 +22,25 @@ Event-driven Symfony service that dynamically adjusts Stalwart outbound rate lim
 - **Final by default**: mark classes `final` unless designed for extension.
 - **Value objects**: use readonly classes for DTOs and value objects.
 
+## API Documentation (IMPORTANT)
+
+**Every endpoint MUST be documented in the OpenAPI spec and visible in Swagger UI at `/api/docs`.**
+
+- **API Platform resources** (`#[ApiResource]`, `#[Get]`, `#[Post]`, etc.) for entity/DTO-based endpoints — these are automatically documented.
+- **Plain Symfony controllers** (using `#[Route]`) that are NOT API Platform resources must be documented via an **OpenAPI decorator** — a service implementing `OpenApiFactoryInterface` decorated with `#[AsDecorator(decorates: 'api_platform.openapi.factory')]`. See `src/OpenApi/HealthCheckOpenApiDecorator.php` for the pattern.
+- **Do NOT use `OpenApi\Attributes` (`zircote/swagger-php`)** — this package is not installed. Use API Platform's own `ApiPlatform\OpenApi\Model\*` classes.
+- No undocumented endpoints — if it exists, it must be in Swagger UI.
+
+## Testing (IMPORTANT)
+
+- **100% code coverage** is required on all new code. Every new class and method must have corresponding tests.
+- **Functional tests** for controllers/endpoints use `Symfony\Bundle\FrameworkBundle\Test\WebTestCase`.
+- **OpenAPI decorators** must also be tested — verify they add the expected paths to the OpenAPI spec.
+- Tests run inside Docker: `docker exec app vendor/bin/phpunit --coverage-text`.
+- The test environment uses `APP_ENV=test` — set in `.env.test` and synced in `tests/bootstrap.php`.
+- **Do NOT set `APP_ENV` as a baked `ENV` in the Dockerfile dev stage** — it conflicts with PHPUnit's test env override. Let `compose.yaml` and `.env` handle it. The Dockerfile `ENV APP_ENV=...` is only for `prod` and `test` stages.
+- The `tests/bootstrap.php` syncs `$_SERVER['APP_ENV']` to `$_ENV['APP_ENV']` before `Dotenv::bootEnv()` — this is required because `KernelTestCase::createKernel()` reads `$_ENV` before `$_SERVER`.
+
 ## Code Quality Gates
 
 All code must pass before commit (enforced by GrumPHP):
@@ -37,7 +56,6 @@ docker exec app vendor/bin/php-cs-fixer fix
 docker exec app vendor/bin/phpunit --coverage-text
 ```
 
-- **100% code coverage** is required. Every new class and method must have corresponding tests.
 - **PHPStan level 10** — no baseline exceptions for new code.
 - Run all three checks before considering any task done.
 
@@ -53,16 +71,27 @@ docker exec app vendor/bin/phpunit --coverage-text
 
 ```
 src/
-├── Controller/     # API endpoints
+├── Controller/     # Symfony controllers (plain endpoints with #[Route])
 ├── Entity/         # Doctrine entities
 ├── Messenger/      # Message handlers & messages
+├── OpenApi/        # OpenAPI decorators for documenting non-ApiResource endpoints
 ├── Repository/     # Doctrine repositories
 └── Kernel.php
 tests/              # PHPUnit tests (mirrors src/ structure)
 migrations/         # Doctrine migrations
 config/             # Symfony configuration
-docker/             # Docker-specific configs
+docker/
+├── Caddyfile       # Production Caddyfile (worker mode, no file watching)
+├── Caddyfile.dev   # Dev Caddyfile (worker mode + file watching for auto-reload)
+└── php/            # PHP ini overrides
 ```
+
+## Development Environment
+
+- **FrankenPHP worker mode** with file watching in dev — code changes in `src/`, `config/`, and `templates/` auto-reload workers (no manual restart needed).
+- Dev Caddyfile is mounted via `compose.yaml` volume: `./docker/Caddyfile.dev:/etc/frankenphp/Caddyfile`.
+- Assets are installed on container startup via the compose `command`.
+- **Never bake `ENV APP_ENV=dev` into the Dockerfile dev stage** — use `compose.yaml` environment instead.
 
 ## Agent Workflow
 
@@ -84,6 +113,7 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 ### 3. Tester Agent (Test)
 - Writes comprehensive tests in `tests/` for everything the developer built.
 - Unit tests for individual classes, integration tests for API endpoints and message handlers.
+- Tests for OpenAPI decorators verifying endpoints appear in the spec.
 - Achieves 100% coverage on all new code.
 - Runs the full quality gate (phpstan + php-cs-fixer + phpunit).
 - If any check fails, fixes the issues (in both test and production code if needed).
@@ -98,7 +128,7 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 - Project: **Stalwart Adaptive Rate Limiter**
 - Team key: **BOR**
 - Fetch tickets with `list_issues` filtered by project.
-- Update ticket status as work progresses.
+- Do NOT update Linear ticket status manually — it syncs automatically via PR open/close/merge.
 
 ## Commands Reference
 
@@ -111,6 +141,7 @@ docker exec app vendor/bin/phpstan analyse
 docker exec app vendor/bin/php-cs-fixer fix
 docker exec app vendor/bin/phpunit
 docker exec app vendor/bin/phpunit --coverage-text
+docker exec app bin/console cache:clear
 docker exec app bin/console doctrine:migrations:migrate
 
 # Composer
