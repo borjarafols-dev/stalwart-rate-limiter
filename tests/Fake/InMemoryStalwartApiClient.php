@@ -38,7 +38,7 @@ final class InMemoryStalwartApiClient implements StalwartApiClientInterface
 
     public function deleteSettings(string $prefix): void
     {
-        $normalizedPrefix = str_ends_with($prefix, '.') ? $prefix : $prefix . '.';
+        $normalizedPrefix = str_ends_with($prefix, '.') ? $prefix : $prefix.'.';
 
         foreach (array_keys($this->settings) as $key) {
             if (str_starts_with($key, $normalizedPrefix)) {
