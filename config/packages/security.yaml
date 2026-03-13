@@ -12,6 +12,9 @@ security:
             # Ensure dev tools and static assets are always allowed
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
+        healthz:
+            pattern: ^/healthz$
+            security: false
         main:
             lazy: true
             provider: users_in_memory
