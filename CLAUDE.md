@@ -155,12 +155,17 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 - Produces a step-by-step implementation plan: which files to create/modify, class designs, interface contracts, and Doctrine mappings.
 - Identifies edge cases and integration points.
 - **Does NOT write code** — only plans.
+- **After user approval**: create the feature branch and push it. This triggers Linear's "In Progress" transition.
+  ```bash
+  git checkout -b feat/BOR-{number}-short-description
+  git push -u origin feat/BOR-{number}-short-description
+  ```
 
 ### 2. Developer Agent (Code)
 - Follows the architect's plan exactly.
 - Implements production code in `src/` and any migrations.
 - Follows all PHP standards and project conventions above.
-- Creates feature branch, makes atomic commits.
+- Makes atomic commits and pushes to the existing branch.
 
 ### 3. Tester Agent (Test)
 - Writes comprehensive tests in `tests/` for everything the developer built.
@@ -169,6 +174,12 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 - Achieves 100% coverage on all new code.
 - Runs the full quality gate (phpstan + php-cs-fixer + phpunit).
 - If any check fails, fixes the issues (in both test and production code if needed).
+- **After all checks pass**: push all changes, create the PR with a summary and test plan, and request a reviewer. This triggers Linear's "In Review" transition.
+  ```bash
+  git push
+  gh pr create --title "feat(BOR-{number}): description" --body "..."
+  gh pr edit --add-reviewer borjarafols
+  ```
 
 ### Coordination Rules
 - **Architect -> USER REVIEW -> Developer -> Tester.**
@@ -176,14 +187,16 @@ Every Linear ticket is implemented using three coordinated agents working in seq
 - Do NOT start coding until the user explicitly approves the plan.
 - Each agent has access to the output/work of the previous agent.
 - The tester agent is the final gatekeeper — nothing is done until all checks pass.
-- After all checks pass: **push the branch and create a PR** using `gh pr create`.
 
 ## Linear Integration
 
 - Project: **Stalwart Adaptive Rate Limiter**
 - Team key: **BOR**
 - Fetch tickets with `list_issues` filtered by project.
-- Do NOT update Linear ticket status manually — it syncs automatically via PR open/close/merge.
+- Do NOT update Linear ticket status manually — it syncs automatically via GitHub:
+  - **Branch created / PR opened** → In Progress
+  - **Reviewer requested on PR** → In Review
+  - **PR merged** → Done
 
 ## Commands Reference
 
