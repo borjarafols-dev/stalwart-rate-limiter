@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Contract\ProviderStateRepositoryInterface;
 use App\Entity\ProviderState;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -11,7 +12,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<ProviderState>
  */
-final class ProviderStateRepository extends ServiceEntityRepository
+final class ProviderStateRepository extends ServiceEntityRepository implements ProviderStateRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

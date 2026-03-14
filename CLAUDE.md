@@ -34,6 +34,27 @@ Wire the interface to the real implementation in `config/services.yaml`. In test
 
 This enables **end-to-end integration tests** where you can simulate external interactions (e.g., "Stalwart sends webhook → service processes it → verify what was written to the Stalwart API") without mocking.
 
+## Controller Pattern (IMPORTANT)
+
+**Controllers must be thin.** They handle HTTP concerns only — never business logic.
+
+All non-trivial endpoints follow the **Command/Handler pattern via Symfony Messenger** (dispatched synchronously):
+
+1. **Controller** (`src/Controller/`) — `final readonly class`, single `__invoke` method. Responsibilities:
+   - Validate HTTP-level concerns (auth, signatures, content type).
+   - Parse the request into a **Command** DTO.
+   - Dispatch the command via `MessageBusInterface`.
+   - Return an HTTP response.
+   - **No business logic, no repository calls, no entity manipulation.**
+
+2. **Command** (`src/Message/`) — `final readonly class`. A plain DTO representing the intent (e.g., `ProcessDeliveryEvent`). Contains only typed properties, no behaviour.
+
+3. **Handler** (`src/MessageHandler/`) — `#[AsMessageHandler]` class. Contains the business logic: loading entities, calling domain services, persisting state. Handlers are `final readonly` and depend on interfaces, not implementations.
+
+**Dispatch mode:** Use `sync` transport for commands that must return a result or where the response depends on the outcome. Configure in `config/packages/messenger.yaml`. Async transport is for fire-and-forget work.
+
+**Simple endpoints** (like `/healthz`) that just return static data don't need a command — a plain controller is fine.
+
 ## API Documentation (IMPORTANT)
 
 **Every endpoint MUST be documented in the OpenAPI spec and visible in Swagger UI at `/api/docs`.**
@@ -95,9 +116,10 @@ docker exec app vendor/bin/phpunit --coverage-text
 ```
 src/
 ├── Contract/       # Interfaces for external services
-├── Controller/     # Symfony controllers (plain endpoints with #[Route])
+├── Controller/     # Thin controllers (HTTP only, dispatch commands)
 ├── Entity/         # Doctrine entities
-├── Messenger/      # Message handlers & messages
+├── Message/        # Command DTOs dispatched via Messenger
+├── MessageHandler/ # Command handlers with business logic (#[AsMessageHandler])
 ├── OpenApi/        # OpenAPI decorators for documenting non-ApiResource endpoints
 ├── Repository/     # Doctrine repositories
 ├── Service/        # Real implementations of Contract interfaces
@@ -105,6 +127,7 @@ src/
 tests/
 ├── Controller/     # Functional tests (WebTestCase)
 ├── Fake/           # In-memory fake implementations for integration tests
+├── MessageHandler/ # Unit tests for command handlers
 ├── Service/        # Unit tests for services
 └── ...             # Mirrors src/ structure
 migrations/         # Doctrine migrations

@@ -44,6 +44,9 @@ services:
     App\Contract\RateLevelEngineInterface:
         alias: App\Service\RateLevelEngine
 
+    App\Contract\ProviderStateRepositoryInterface:
+        alias: App\Repository\ProviderStateRepository
+
     App\Contract\LimitApplierInterface:
         alias: App\Service\NullLimitApplier
 
