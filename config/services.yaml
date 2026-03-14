@@ -37,6 +37,12 @@ services:
         arguments:
             $httpClient: '@stalwart.client'
 
+    App\Contract\ProviderMapperInterface:
+        alias: App\Service\ProviderMapper
+
+    App\Contract\RateLevelEngineInterface:
+        alias: App\Service\RateLevelEngine
+
 when@test:
     services:
         App\Contract\StalwartApiClientInterface:
@@ -44,4 +50,11 @@ when@test:
             public: true
 
         App\Tests\Fake\InMemoryStalwartApiClient:
+            public: true
+
+        App\Contract\ProviderMapperInterface:
+            alias: App\Tests\Fake\InMemoryProviderMapper
+            public: true
+
+        App\Tests\Fake\InMemoryProviderMapper:
             public: true
