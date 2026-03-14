@@ -35,4 +35,15 @@ final readonly class ProviderMapper implements ProviderMapperInterface
 
         return self::DOMAIN_MAP[$normalized] ?? 'default';
     }
+
+    /**
+     * @return list<string>
+     */
+    public function domainsForProvider(string $provider): array
+    {
+        return array_keys(array_filter(
+            self::DOMAIN_MAP,
+            static fn (string $p): bool => $p === $provider,
+        ));
+    }
 }

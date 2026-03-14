@@ -9,4 +9,6 @@ use App\Entity\ProviderState;
 interface LimitApplierInterface
 {
     public function apply(ProviderState $state): void;
+
+    public function syncAll(): void;
 }

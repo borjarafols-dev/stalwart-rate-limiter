@@ -50,4 +50,38 @@ final class ProviderMapperTest extends TestCase
         yield 'uppercase domain' => ['GMAIL.COM', 'gmail'];
         yield 'mixed case email' => ['User@GmAiL.CoM', 'gmail'];
     }
+
+    #[Test]
+    public function domainsForProviderReturnsGmailDomains(): void
+    {
+        $domains = $this->mapper->domainsForProvider('gmail');
+
+        self::assertContains('gmail.com', $domains);
+        self::assertContains('googlemail.com', $domains);
+        self::assertCount(2, $domains);
+    }
+
+    #[Test]
+    public function domainsForProviderReturnsMicrosoftDomains(): void
+    {
+        $domains = $this->mapper->domainsForProvider('microsoft');
+
+        self::assertContains('outlook.com', $domains);
+        self::assertContains('hotmail.com', $domains);
+        self::assertContains('live.com', $domains);
+        self::assertContains('msn.com', $domains);
+        self::assertCount(4, $domains);
+    }
+
+    #[Test]
+    public function domainsForProviderReturnsEmptyForUnknown(): void
+    {
+        self::assertSame([], $this->mapper->domainsForProvider('unknown'));
+    }
+
+    #[Test]
+    public function domainsForProviderReturnsEmptyForDefault(): void
+    {
+        self::assertSame([], $this->mapper->domainsForProvider('default'));
+    }
 }
