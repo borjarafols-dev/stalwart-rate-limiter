@@ -26,6 +26,9 @@ services:
     OpenTelemetry\API\Logs\LoggerProviderInterface:
         factory: ['OpenTelemetry\API\Globals', 'loggerProvider']
 
+    OpenTelemetry\API\Metrics\MeterProviderInterface:
+        factory: ['OpenTelemetry\API\Globals', 'meterProvider']
+
     OpenTelemetry\Contrib\Logs\Monolog\Handler:
         arguments:
             $loggerProvider: '@OpenTelemetry\API\Logs\LoggerProviderInterface'
@@ -46,6 +49,9 @@ services:
 
     App\Contract\ProviderStateRepositoryInterface:
         alias: App\Repository\ProviderStateRepository
+
+    App\Contract\RateLimiterMetricsInterface:
+        alias: App\Service\RateLimiterMetrics
 
     App\Contract\LimitApplierInterface:
         alias: App\Service\LimitApplier
@@ -78,4 +84,11 @@ when@test:
             public: true
 
         App\Tests\Fake\InMemoryLimitApplier:
+            public: true
+
+        App\Contract\RateLimiterMetricsInterface:
+            alias: App\Tests\Fake\InMemoryRateLimiterMetrics
+            public: true
+
+        App\Tests\Fake\InMemoryRateLimiterMetrics:
             public: true
