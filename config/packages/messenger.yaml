@@ -4,3 +4,9 @@ framework:
             messenger.bus.default:
                 middleware:
                     - 'App\Messenger\Middleware\OpenTelemetryMiddleware'
+
+        transports:
+            sync: 'sync://'
+
+        routing:
+            'App\Message\ProcessDeliveryEvent': sync
