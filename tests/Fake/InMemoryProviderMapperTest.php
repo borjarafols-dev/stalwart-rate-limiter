@@ -64,4 +64,34 @@ final class InMemoryProviderMapperTest extends TestCase
 
         self::assertSame('gmail', $mapper->resolve('GMAIL.COM'));
     }
+
+    #[Test]
+    public function domainsForProviderReturnsMatchingDomains(): void
+    {
+        $mapper = new InMemoryProviderMapper();
+
+        $domains = $mapper->domainsForProvider('gmail');
+
+        self::assertContains('gmail.com', $domains);
+        self::assertContains('googlemail.com', $domains);
+    }
+
+    #[Test]
+    public function domainsForProviderReturnsEmptyForUnknown(): void
+    {
+        $mapper = new InMemoryProviderMapper();
+
+        self::assertSame([], $mapper->domainsForProvider('unknown'));
+    }
+
+    #[Test]
+    public function domainsForProviderReflectsAddedMappings(): void
+    {
+        $mapper = new InMemoryProviderMapper();
+        $mapper->addMapping('custom.org', 'custom');
+
+        $domains = $mapper->domainsForProvider('custom');
+
+        self::assertSame(['custom.org'], $domains);
+    }
 }

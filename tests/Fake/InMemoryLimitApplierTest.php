@@ -53,4 +53,26 @@ final class InMemoryLimitApplierTest extends TestCase
 
         self::assertCount(0, $applier->getAppliedStates());
     }
+
+    #[Test]
+    public function syncAllIncrementsSyncCount(): void
+    {
+        $applier = new InMemoryLimitApplier();
+
+        $applier->syncAll();
+        $applier->syncAll();
+
+        self::assertSame(2, $applier->getSyncAllCallCount());
+    }
+
+    #[Test]
+    public function resetClearsSyncCount(): void
+    {
+        $applier = new InMemoryLimitApplier();
+        $applier->syncAll();
+
+        $applier->reset();
+
+        self::assertSame(0, $applier->getSyncAllCallCount());
+    }
 }
