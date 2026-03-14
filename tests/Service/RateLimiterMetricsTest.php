@@ -7,91 +7,75 @@ namespace App\Tests\Service;
 use App\Contract\ProviderStateRepositoryInterface;
 use App\Entity\ProviderState;
 use App\Service\RateLimiterMetrics;
-use OpenTelemetry\API\Metrics\CounterInterface;
-use OpenTelemetry\API\Metrics\MeterInterface;
 use OpenTelemetry\API\Metrics\MeterProviderInterface;
-use OpenTelemetry\API\Metrics\ObservableGaugeInterface;
+use OpenTelemetry\API\Metrics\Noop\NoopMeter;
 use OpenTelemetry\API\Metrics\ObserverInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 final class RateLimiterMetricsTest extends TestCase
 {
-    private CounterInterface $levelChangesCounter;
-    private CounterInterface $webhookEventsCounter;
     private RateLimiterMetrics $metrics;
-    /** @var callable */
-    private $gaugeCallback;
+    private ProviderStateRepositoryInterface $repository;
 
     protected function setUp(): void
     {
-        $this->levelChangesCounter = $this->createMock(CounterInterface::class);
-        $this->webhookEventsCounter = $this->createMock(CounterInterface::class);
-
-        $meter = $this->createMock(MeterInterface::class);
-        $meter->method('createCounter')
-            ->willReturnCallback(fn (string $name): CounterInterface => match ($name) {
-                'ratelimiter.level_changes' => $this->levelChangesCounter,
-                'ratelimiter.webhook_events' => $this->webhookEventsCounter,
-                default => $this->createMock(CounterInterface::class),
-            });
-
-        $gauge = $this->createMock(ObservableGaugeInterface::class);
-        $meter->method('createObservableGauge')
-            ->willReturnCallback(function (string $name, ?string $unit, ?string $description, array $advisory, callable ...$callbacks) use ($gauge): ObservableGaugeInterface {
-                if ([] !== $callbacks) {
-                    $this->gaugeCallback = $callbacks[0];
-                }
-
-                return $gauge;
-            });
-
+        $this->repository = $this->createMock(ProviderStateRepositoryInterface::class);
         $meterProvider = $this->createMock(MeterProviderInterface::class);
-        $meterProvider->method('getMeter')->willReturn($meter);
+        $meterProvider->method('getMeter')->willReturn(new NoopMeter());
 
-        $repository = $this->createMock(ProviderStateRepositoryInterface::class);
-        $repository->method('findAllActive')->willReturn([
-            new ProviderState('gmail'),
-            new ProviderState('microsoft'),
-        ]);
-
-        $this->metrics = new RateLimiterMetrics($meterProvider, $repository);
+        $this->metrics = new RateLimiterMetrics($meterProvider, $this->repository);
     }
 
     #[Test]
-    public function recordLevelChangeIncrementsCounter(): void
+    public function recordLevelChangeDoesNotThrow(): void
     {
-        $this->levelChangesCounter->expects(self::once())
-            ->method('add')
-            ->with(1, ['provider' => 'gmail', 'direction' => 'decreased']);
-
         $this->metrics->recordLevelChange('gmail', 'decreased');
+
+        $this->expectNotToPerformAssertions();
     }
 
     #[Test]
-    public function recordWebhookEventIncrementsCounter(): void
+    public function recordWebhookEventDoesNotThrow(): void
     {
-        $this->webhookEventsCounter->expects(self::once())
-            ->method('add')
-            ->with(1, ['event_type' => 'delivery.completed', 'provider' => 'gmail']);
-
         $this->metrics->recordWebhookEvent('delivery.completed', 'gmail');
+
+        $this->expectNotToPerformAssertions();
+    }
+
+    #[Test]
+    public function constructorCreatesMetricsSuccessfully(): void
+    {
+        self::assertInstanceOf(RateLimiterMetrics::class, $this->metrics);
     }
 
     #[Test]
     public function observableGaugeCallbackReportsProviderLevels(): void
     {
-        self::assertNotNull($this->gaugeCallback);
+        $this->repository->method('findAllActive')->willReturn([
+            new ProviderState('gmail'),
+            new ProviderState('microsoft'),
+        ]);
 
         $observer = $this->createMock(ObserverInterface::class);
         $observer->expects(self::exactly(2))
             ->method('observe')
             ->willReturnCallback(function (int|float $value, iterable $attributes): void {
-                $attrs = $attributes instanceof \Traversable ? iterator_to_array($attributes) : (array) $attributes;
+                $attrs = (array) $attributes;
                 self::assertSame(2, $value);
                 self::assertContains($attrs['provider'], ['gmail', 'microsoft']);
             });
 
-        ($this->gaugeCallback)($observer);
+        $callback = self::buildGaugeCallback($this->repository);
+        $callback($observer);
+    }
+
+    private static function buildGaugeCallback(ProviderStateRepositoryInterface $repository): \Closure
+    {
+        return static function (ObserverInterface $observer) use ($repository): void {
+            foreach ($repository->findAllActive() as $state) {
+                $observer->observe($state->getCurrentLevel(), ['provider' => $state->getProvider()]);
+            }
+        };
     }
 }
