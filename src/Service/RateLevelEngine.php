@@ -20,9 +20,10 @@ final readonly class RateLevelEngine implements RateLevelEngineInterface
     public function processEvent(ProviderState $state, bool $success, ?string $errorType = null): LevelChange
     {
         $now = new \DateTimeImmutable();
+        $isStale = $this->isStale($state, $now);
         $state->setLastEvent($now);
 
-        if ($this->isStale($state, $now)) {
+        if ($isStale) {
             return $this->resetToDefault($state);
         }
 
