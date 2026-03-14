@@ -7,9 +7,11 @@ namespace App\Tests\Repository;
 use App\Entity\ProviderState;
 use App\Repository\ProviderStateRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
+#[Group('integration')]
 final class ProviderStateRepositoryTest extends KernelTestCase
 {
     private ProviderStateRepository $repository;

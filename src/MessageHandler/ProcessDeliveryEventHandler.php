@@ -11,7 +11,6 @@ use App\Contract\RateLevelEngineInterface;
 use App\Entity\ProviderState;
 use App\Enum\LevelChange;
 use App\Message\ProcessDeliveryEvent;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -25,7 +24,6 @@ final readonly class ProcessDeliveryEventHandler
         private ProviderMapperInterface $providerMapper,
         private LimitApplierInterface $limitApplier,
         private ProviderStateRepositoryInterface $providerStateRepository,
-        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -33,11 +31,8 @@ final readonly class ProcessDeliveryEventHandler
     {
         $providerName = $this->providerMapper->resolve($message->rcptDomain);
 
-        $state = $this->providerStateRepository->findByProvider($providerName);
-        if (null === $state) {
-            $state = new ProviderState($providerName);
-            $this->entityManager->persist($state);
-        }
+        $state = $this->providerStateRepository->findByProvider($providerName)
+            ?? new ProviderState($providerName);
 
         $success = \in_array($message->type, self::SUCCESS_EVENTS, true);
         $errorType = $success ? null : self::classifyError($message->status);
@@ -47,7 +42,7 @@ final readonly class ProcessDeliveryEventHandler
             $this->limitApplier->apply($state);
         }
 
-        $this->entityManager->flush();
+        $this->providerStateRepository->save($state);
     }
 
     private static function classifyError(?string $status): ?string

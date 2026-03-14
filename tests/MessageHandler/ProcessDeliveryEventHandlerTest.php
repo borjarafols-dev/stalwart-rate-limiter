@@ -12,7 +12,6 @@ use App\Entity\ProviderState;
 use App\Enum\LevelChange;
 use App\Message\ProcessDeliveryEvent;
 use App\MessageHandler\ProcessDeliveryEventHandler;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +22,6 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
     private ProviderMapperInterface&MockObject $providerMapper;
     private LimitApplierInterface&MockObject $limitApplier;
     private ProviderStateRepositoryInterface&MockObject $repository;
-    private EntityManagerInterface&MockObject $entityManager;
     private ProcessDeliveryEventHandler $handler;
 
     protected function setUp(): void
@@ -32,14 +30,12 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
         $this->providerMapper = $this->createMock(ProviderMapperInterface::class);
         $this->limitApplier = $this->createMock(LimitApplierInterface::class);
         $this->repository = $this->createMock(ProviderStateRepositoryInterface::class);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
 
         $this->handler = new ProcessDeliveryEventHandler(
             $this->rateLevelEngine,
             $this->providerMapper,
             $this->limitApplier,
             $this->repository,
-            $this->entityManager,
         );
     }
 
@@ -52,7 +48,7 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
         $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::None);
 
         $this->limitApplier->expects(self::never())->method('apply');
-        $this->entityManager->expects(self::once())->method('flush');
+        $this->repository->expects(self::once())->method('save')->with($state);
 
         ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'gmail.com'));
     }
@@ -159,28 +155,27 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
     }
 
     #[Test]
-    public function newProviderIsCreatedAndPersisted(): void
+    public function newProviderIsCreatedAndSaved(): void
     {
         $this->providerMapper->method('resolve')->willReturn('newprovider');
         $this->repository->method('findByProvider')->willReturn(null);
         $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::None);
 
-        $this->entityManager->expects(self::once())->method('persist')
+        $this->repository->expects(self::once())->method('save')
             ->with(self::callback(fn (ProviderState $s): bool => 'newprovider' === $s->getProvider()));
-        $this->entityManager->expects(self::once())->method('flush');
 
         ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'unknown.org'));
     }
 
     #[Test]
-    public function existingProviderIsNotPersisted(): void
+    public function existingProviderIsSaved(): void
     {
+        $state = new ProviderState('gmail');
         $this->providerMapper->method('resolve')->willReturn('gmail');
-        $this->repository->method('findByProvider')->willReturn(new ProviderState('gmail'));
+        $this->repository->method('findByProvider')->willReturn($state);
         $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::None);
 
-        $this->entityManager->expects(self::never())->method('persist');
-        $this->entityManager->expects(self::once())->method('flush');
+        $this->repository->expects(self::once())->method('save')->with($state);
 
         ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'gmail.com'));
     }

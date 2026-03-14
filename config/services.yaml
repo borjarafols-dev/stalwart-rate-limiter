@@ -66,6 +66,13 @@ when@test:
         App\Tests\Fake\InMemoryProviderMapper:
             public: true
 
+        App\Contract\ProviderStateRepositoryInterface:
+            alias: App\Tests\Fake\InMemoryProviderStateRepository
+            public: true
+
+        App\Tests\Fake\InMemoryProviderStateRepository:
+            public: true
+
         App\Contract\LimitApplierInterface:
             alias: App\Tests\Fake\InMemoryLimitApplier
             public: true
