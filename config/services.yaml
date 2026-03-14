@@ -48,7 +48,7 @@ services:
         alias: App\Repository\ProviderStateRepository
 
     App\Contract\LimitApplierInterface:
-        alias: App\Service\NullLimitApplier
+        alias: App\Service\LimitApplier
 
 when@test:
     services:

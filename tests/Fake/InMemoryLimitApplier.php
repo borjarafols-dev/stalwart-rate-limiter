@@ -12,9 +12,16 @@ final class InMemoryLimitApplier implements LimitApplierInterface
     /** @var list<ProviderState> */
     private array $appliedStates = [];
 
+    private int $syncAllCallCount = 0;
+
     public function apply(ProviderState $state): void
     {
         $this->appliedStates[] = $state;
+    }
+
+    public function syncAll(): void
+    {
+        ++$this->syncAllCallCount;
     }
 
     /**
@@ -25,8 +32,14 @@ final class InMemoryLimitApplier implements LimitApplierInterface
         return $this->appliedStates;
     }
 
+    public function getSyncAllCallCount(): int
+    {
+        return $this->syncAllCallCount;
+    }
+
     public function reset(): void
     {
         $this->appliedStates = [];
+        $this->syncAllCallCount = 0;
     }
 }

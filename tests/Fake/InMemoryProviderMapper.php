@@ -36,6 +36,17 @@ final class InMemoryProviderMapper implements ProviderMapperInterface
         return $this->domainMap[$normalized] ?? 'default';
     }
 
+    /**
+     * @return list<string>
+     */
+    public function domainsForProvider(string $provider): array
+    {
+        return array_values(array_keys(array_filter(
+            $this->domainMap,
+            static fn (string $p): bool => $p === $provider,
+        )));
+    }
+
     public function addMapping(string $domain, string $provider): void
     {
         $this->domainMap[strtolower($domain)] = $provider;
