@@ -8,6 +8,7 @@ use App\Contract\LimitApplierInterface;
 use App\Contract\ProviderMapperInterface;
 use App\Contract\ProviderStateRepositoryInterface;
 use App\Contract\RateLevelEngineInterface;
+use App\Contract\RateLimiterMetricsInterface;
 use App\Entity\ProviderState;
 use App\Enum\LevelChange;
 use App\Message\ProcessDeliveryEvent;
@@ -22,6 +23,7 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
     private ProviderMapperInterface&MockObject $providerMapper;
     private LimitApplierInterface&MockObject $limitApplier;
     private ProviderStateRepositoryInterface&MockObject $repository;
+    private RateLimiterMetricsInterface&MockObject $metrics;
     private ProcessDeliveryEventHandler $handler;
 
     protected function setUp(): void
@@ -30,12 +32,14 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
         $this->providerMapper = $this->createMock(ProviderMapperInterface::class);
         $this->limitApplier = $this->createMock(LimitApplierInterface::class);
         $this->repository = $this->createMock(ProviderStateRepositoryInterface::class);
+        $this->metrics = $this->createMock(RateLimiterMetricsInterface::class);
 
         $this->handler = new ProcessDeliveryEventHandler(
             $this->rateLevelEngine,
             $this->providerMapper,
             $this->limitApplier,
             $this->repository,
+            $this->metrics,
         );
     }
 
@@ -176,6 +180,61 @@ final class ProcessDeliveryEventHandlerTest extends TestCase
         $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::None);
 
         $this->repository->expects(self::once())->method('save')->with($state);
+
+        ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'gmail.com'));
+    }
+
+    #[Test]
+    public function webhookEventIsRecordedInMetrics(): void
+    {
+        $this->providerMapper->method('resolve')->willReturn('gmail');
+        $this->repository->method('findByProvider')->willReturn(new ProviderState('gmail'));
+        $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::None);
+
+        $this->metrics->expects(self::once())
+            ->method('recordWebhookEvent')
+            ->with('delivery.completed', 'gmail');
+
+        ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'gmail.com'));
+    }
+
+    #[Test]
+    public function levelChangeRecordsMetricWithDirection(): void
+    {
+        $this->providerMapper->method('resolve')->willReturn('gmail');
+        $this->repository->method('findByProvider')->willReturn(new ProviderState('gmail'));
+        $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::Decreased);
+
+        $this->metrics->expects(self::once())
+            ->method('recordLevelChange')
+            ->with('gmail', 'decreased');
+
+        ($this->handler)(new ProcessDeliveryEvent('delivery.failed', 'gmail.com', '550'));
+    }
+
+    #[Test]
+    public function levelIncreaseRecordsMetricWithDirection(): void
+    {
+        $this->providerMapper->method('resolve')->willReturn('gmail');
+        $this->repository->method('findByProvider')->willReturn(new ProviderState('gmail'));
+        $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::Increased);
+
+        $this->metrics->expects(self::once())
+            ->method('recordLevelChange')
+            ->with('gmail', 'increased');
+
+        ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'gmail.com'));
+    }
+
+    #[Test]
+    public function noLevelChangeDoesNotRecordLevelMetric(): void
+    {
+        $this->providerMapper->method('resolve')->willReturn('gmail');
+        $this->repository->method('findByProvider')->willReturn(new ProviderState('gmail'));
+        $this->rateLevelEngine->method('processEvent')->willReturn(LevelChange::None);
+
+        $this->metrics->expects(self::never())->method('recordLevelChange');
+        $this->metrics->expects(self::once())->method('recordWebhookEvent');
 
         ($this->handler)(new ProcessDeliveryEvent('delivery.completed', 'gmail.com'));
     }
