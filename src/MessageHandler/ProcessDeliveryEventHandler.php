@@ -8,6 +8,7 @@ use App\Contract\LimitApplierInterface;
 use App\Contract\ProviderMapperInterface;
 use App\Contract\ProviderStateRepositoryInterface;
 use App\Contract\RateLevelEngineInterface;
+use App\Contract\RateLimiterMetricsInterface;
 use App\Entity\ProviderState;
 use App\Enum\LevelChange;
 use App\Message\ProcessDeliveryEvent;
@@ -24,6 +25,7 @@ final readonly class ProcessDeliveryEventHandler
         private ProviderMapperInterface $providerMapper,
         private LimitApplierInterface $limitApplier,
         private ProviderStateRepositoryInterface $providerStateRepository,
+        private RateLimiterMetricsInterface $metrics,
     ) {
     }
 
@@ -38,8 +40,11 @@ final readonly class ProcessDeliveryEventHandler
         $errorType = $success ? null : self::classifyError($message->status);
         $change = $this->rateLevelEngine->processEvent($state, $success, $errorType);
 
+        $this->metrics->recordWebhookEvent($message->type, $providerName);
+
         if (LevelChange::None !== $change) {
             $this->limitApplier->apply($state);
+            $this->metrics->recordLevelChange($providerName, strtolower($change->name));
         }
 
         $this->providerStateRepository->save($state);
