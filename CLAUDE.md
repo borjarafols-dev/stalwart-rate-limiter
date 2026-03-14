@@ -81,13 +81,14 @@ docker exec app vendor/bin/phpunit --coverage-text
 - **PHPStan level 10** — no baseline exceptions for new code.
 - Run all three checks before considering any task done.
 
-## Git Workflow
+## Git Workflow (IMPORTANT)
 
 - **Branch per ticket**: `feat/BOR-{number}-short-description` or `fix/BOR-{number}-short-description`
 - Create the branch from `main` before starting work.
 - Commit messages: `feat(BOR-{number}): description` or `fix(BOR-{number}): description`.
 - Keep commits atomic — one logical change per commit.
-- **Never** add `Co-Authored-By` lines to commit messages.
+- **NEVER add `Co-Authored-By` lines to commit messages.** This applies to ALL commits and PR descriptions — no exceptions.
+- **NEVER add `Generated with` attribution lines** to PR descriptions or commit messages.
 
 ## Project Structure
 
