@@ -21,7 +21,7 @@ RUN install-php-extensions pdo_pgsql intl opcache opentelemetry protobuf pcov
 # Stage 3: Application base
 FROM dunglas/frankenphp:php8.4-bookworm AS app
 
-LABEL org.opencontainers.image.source="https://github.com/borjarafols-dev/sample-symfony-api-platform"
+LABEL org.opencontainers.image.source="https://github.com/borjarafols-dev/stalwart-rate-limiter"
 
 COPY --from=php-extensions-build /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=php-extensions-build /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
