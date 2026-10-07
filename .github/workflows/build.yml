@@ -49,7 +49,7 @@ jobs:
           push: true
           target: prod
           build-args: |
-            GITHUB_TOKEN=${{ secrets.COMPOSER_AUTH }}
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

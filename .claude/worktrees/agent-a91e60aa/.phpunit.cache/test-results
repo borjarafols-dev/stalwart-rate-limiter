@@ -1,0 +1,1 @@
+{"version":2,"defects":{"App\\Tests\\Controller\\HealthControllerTest::testHealthzReturnsOk":8,"App\\Tests\\Controller\\HealthControllerTest::testHealthzRejectsPostMethod":8},"times":{"App\\Tests\\Controller\\HealthControllerTest::testHealthzReturnsOk":1.026,"App\\Tests\\Controller\\HealthControllerTest::testHealthzRejectsPostMethod":0.023}}
