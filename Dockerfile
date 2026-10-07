@@ -1,5 +1,5 @@
 # Stage 1: Install Composer dependencies
-FROM composer:2.8 AS composer-build
+FROM composer:2.10 AS composer-build
 
 ARG GITHUB_TOKEN
 WORKDIR /app
